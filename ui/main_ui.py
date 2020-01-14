@@ -72,8 +72,8 @@ class Main_Widget(QtWidgets.QWidget):
         self.info_splitter.setStretchFactor(0, 4)
         self.info_splitter.setStretchFactor(1, 7)
 
-        # status bar layout
-        # login info
+        # 运行状态栏
+        # 登录信息
         self.login_info_button = QtWidgets.QPushButton("xxxx | xxx")
         self.status_info_label = QtWidgets.QLabel("xxxx")
         self.status_info_label.setAlignment(QtCore.Qt.AlignCenter)
@@ -165,6 +165,7 @@ class Main_Widget(QtWidgets.QWidget):
     @QtCore.Slot()
     def clear_ui(self):
         self.task_listWidget.clear()
+        self.task_listWidget.search_line.clear()
         self.task_versions_widget.clear_items()
         self.task_info_widget.clear_items()
         self.version_creator_widget.clear_info()

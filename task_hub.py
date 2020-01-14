@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 __author__ = "yangtao"
-__version__ = '1.0'
+__version__ = '1.2'
 
 import sys
 import os
@@ -8,7 +8,6 @@ import threading as td
 
 from PySide2 import QtWidgets
 from PySide2 import QtCore
-from PySide2 import QtGui
 # pyinstaller 打包引用模块
 import xmlrpc
 import xmlrpc.client
@@ -32,8 +31,9 @@ class Signal_Wrapper(QtCore.QObject):
     set_current_task_status = QtCore.Signal(str)
     ui_enabled = QtCore.Signal(bool)
     set_status_text = QtCore.Signal(str)
-    set_task_item = QtCore.Signal(str, list, int)
+    set_task_item = QtCore.Signal(str, str, list, int)
     clear_ui = QtCore.Signal()
+    uploaded_status = QtCore.Signal(str, str)
 
     def __init__(self):
         super(Signal_Wrapper, self).__init__()
@@ -142,10 +142,12 @@ class Main():
         self.signal_wrapper.set_status_text.connect(self.main_widget.set_status_text)
         # 任务切换
         self.main_widget.task_listWidget.currentItemChanged.connect(self.__task_change_thread)
-        # 提交
+        # 提交t
         self.main_widget.version_creator_widget.submit_button.clicked.connect(self.__create_version_thread)
         # 跳转到 shotgun
         self.main_widget.task_listWidget.itemDoubleClicked.connect(self.jump_to_shotgun)
+        # 提交状态信息提示框
+        self.signal_wrapper.uploaded_status.connect(self.main_widget.version_creator_widget.messagebox)
 
     def jump_to_shotgun(self, item):
         task_id = item.id
@@ -176,14 +178,14 @@ class Main():
                                         description=upload_info["description"],
                                         logged_time=upload_info["logged_time"])
             if version:
-                self.signal_wrapper.set_status_text.emit("提交成功")
+                self.signal_wrapper.uploaded_status.emit("information", "提交成功")
             else:
-                self.signal_wrapper.set_status_text.emit("提交失败")
+                self.signal_wrapper.uploaded_status.emit("warning", "提交失败,请重新提交")
         else:
             self.signal_wrapper.set_status_text.emit("请选中一个任务再提交")
 
-        self.signal_wrapper.ui_enabled.emit(True)
         self.task_change()
+        self.signal_wrapper.ui_enabled.emit(True)
 
     def __create_version_thread(self):
         tr = td.Thread(target=self.create_version)
@@ -258,21 +260,29 @@ class Main():
         tasks_entity = db.get_task(project, task_status, limit_num)
         if not tasks_entity:
             tasks_entity = []
+        tasks_entity.reverse()
         for te in tasks_entity:
             id = te["id"]
-            name = ""
-            info = []
-            if "content" in te:
-                name = te["content"]
-            if "entity" in te:
-                info.append("%s(%s)"%(te["entity"]["name"], te["entity"]["type"]))
-            if "sg_status_list" in te:
-                status_name = te["sg_status_list"]
-                info.append("%s" % status_name)
-            if "due_date"  in te:
-                info.append("%s" % te["due_date"])
+            title = "%s"%(te["entity"]["name"])
+            if not title:
+                title = ""
+            subtitle = te["sg_status_list"]
+            if not subtitle:
+                subtitle = ""
 
-            self.signal_wrapper.set_task_item.emit(name, info, id)
+            info = []
+            type = te["entity"]["type"]
+            if type:
+                info.append(type)
+            content = te["content"]
+            if content:
+                info.append(content)
+            start_date = str(te["start_date"])
+            due_date = str(te["due_date"])
+            if start_date and due_date:
+                info.append("%s - %s"%(start_date, due_date))
+
+            self.signal_wrapper.set_task_item.emit(title, subtitle, info, id)
 
         self.signal_wrapper.ui_enabled.emit(True)
         self.signal_wrapper.set_status_text.emit("找到 %s 个任务"%len(tasks_entity))

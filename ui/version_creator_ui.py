@@ -119,6 +119,14 @@ class Creator_Widget(QtWidgets.QWidget):
 
         return current_edit_info
 
+    @QtCore.Slot(str, str)
+    def messagebox(self, type, info):
+        if type == "warning":
+            QtWidgets.QMessageBox.warning(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+        else:
+            QtWidgets.QMessageBox.information(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+
+
 
 
 if __name__ == "__main__":

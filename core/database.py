@@ -9,6 +9,7 @@ import shotgun_api3
 class SGDB:
     def __init__(self):
         self.sg = None
+        self.supper_sg = None
         self.current_user = None
 
     def login(self, sgurl, login, password, current_user):
@@ -52,7 +53,8 @@ class SGDB:
             return status_entity["code"]
 
     def get_task(self, project_name, task_status=None, limit=0):
-        fields = ["content", "entity", "sg_status_list", "due_date"]
+        fields = ["content", "entity", "sg_status_list",
+                  "start_date", "due_date"]
         filters = [["project", "name_is", project_name],
                    ["task_assignees", "in", self.current_user]]
         if task_status:
@@ -62,7 +64,9 @@ class SGDB:
         return self.sg.find("Task", filters, fields, limit=limit)
 
     def get_task_info(self, task_id):
-        fields = ["project", "step", "content", "entity", "sg_status_list", "sg_description", "due_date", "time_logs_sum"]
+        fields = ["project", "step", "content", "entity",
+                  "sg_status_list", "sg_description",
+                  "start_date", "due_date", "time_logs_sum"]
         filters = [["id", "is", int(task_id)]]
         return self.sg.find_one("Task", filters, fields)
 
@@ -85,22 +89,44 @@ class SGDB:
                         "code": version_name,
                         "description": description}
         # 创建版本
-        version = self.sg.create("Version", version_data)
-        if version:
+        version_entity = self.sg.create("Version", version_data)
+        if not version_entity:
+            return
+        try:
             #上传文件
-            self.sg.upload(version["type"],
-                           version["id"],
+            self.sg.upload(version_entity["type"],
+                           version_entity["id"],
                            uploaded,
                            field_name="sg_uploaded_movie",
                            display_name=version_name)
-            # 添加任务 timelogged
-            timelog_data = {"project":project_entity,
-                            "user": self.current_user,
-                            "entity": task_entity,
-                            "duration": logged_time*600,
-                            "description": version_name}
-            version = self.sg.create("TimeLog", timelog_data)
-        return version
+        except Exception as e:
+            print(e)
+
+        # 检查
+        version_id = version_entity["id"]
+        try:
+            sg_uploaded_movie = self.get_version_info(version_id)
+            if not sg_uploaded_movie:
+                raise Exception("sg_uploaded_movie is empty")
+        except Exception as e:
+            print(e)
+            self.sg.delete("Version", version_id)
+            return
+
+        # 添加任务 timelogged
+        timelog_data = {"project": project_entity,
+                        "user": self.current_user,
+                        "entity": task_entity,
+                        "duration": logged_time*600,
+                        "description": version_name}
+        self.sg.create("TimeLog", timelog_data)
+
+        return version_entity
+
+    def get_version_info(self, version_id):
+        fields = ["sg_uploaded_movie"]
+        filters = [["id", "is", int(version_id)]]
+        return self.sg.find_one("Version", filters, fields)
 
 
 
@@ -119,9 +145,4 @@ if __name__ == "__main__":
 
     sgdb = SGDB()
     sgdb.login(sgurl, login, password, current_user)
-    print(sgdb.get_proejcts())
-    # sgdb.create_version("29365",
-    #                     "TEST_c0010_hair_v01",
-    #                     "D:/mycode/DZL_task_hub/res/screen/welcome.png",
-    #                     "dddd",
-    #                     3)
+    print(sgdb.get_task_info(30478))
