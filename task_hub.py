@@ -208,7 +208,7 @@ class Main():
         self.signal_wrapper.ui_enabled.emit(False)
         task_id = self.main_widget.get_current_task_id()
         if task_id:
-            # 解锁工具栏
+            # 锁工具栏
             self.main_widget.tools_tab_widget.setEnabled(True)
 
             db = self.__get_db()
@@ -280,20 +280,20 @@ class Main():
         tasks_entity.reverse()
         for te in tasks_entity:
             id = te["id"]
-            title = "%s"%(te["entity"]["name"])
-            if not title:
-                title = ""
-            subtitle = te["sg_status_list"]
-            if not subtitle:
-                subtitle = ""
+            entity = te["entity"]
+            title = ""
+            subtitle = ""
+            if entity:
+                title = entity["name"]
+                subtitle = entity["type"]
 
             info = []
-            type = te["entity"]["type"]
-            if type:
-                info.append(type)
             content = te["content"]
             if content:
                 info.append(content)
+            status = te["sg_status_list"]
+            if status:
+                info.append(status)
             start_date = str(te["start_date"])
             due_date = str(te["due_date"])
             if start_date and due_date:
