@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 __author__ = "yangtao"
-__version__ = '1.2'
+__version__ = '1.3'
+
 
 import sys
 import os
@@ -19,7 +20,7 @@ from ui import splash_screen
 from core import secrets_tool
 from core import database
 from core import util
-from core import name_config
+from core import name_center
 
 
 
@@ -109,6 +110,9 @@ class Main():
         # 初始化信号和槽的连接
         self.__init_connect()
 
+        # 当前版本文件文件名
+        self.version_name = None
+
     def __init_connect(self):
         # 筛选栏控件
         # 开关闭状态筛选栏
@@ -141,13 +145,15 @@ class Main():
         # 设置底部状态栏
         self.signal_wrapper.set_status_text.connect(self.main_widget.set_status_text)
         # 任务切换
-        self.main_widget.task_listWidget.currentItemChanged.connect(self.__task_change_thread)
-        # 提交t
+        self.main_widget.task_listWidget.currentItemChanged.connect(self.__task_selected_thread)
+        # 提交
         self.main_widget.version_creator_widget.submit_button.clicked.connect(self.__create_version_thread)
         # 跳转到 shotgun
         self.main_widget.task_listWidget.itemDoubleClicked.connect(self.jump_to_shotgun)
         # 提交状态信息提示框
         self.signal_wrapper.uploaded_status.connect(self.main_widget.version_creator_widget.messagebox)
+        # 版本名描述添加到版本名
+        self.main_widget.version_creator_widget.version_name_description.textChanged.connect(self.set_description_name)
 
     def jump_to_shotgun(self, item):
         task_id = item.id
@@ -184,14 +190,21 @@ class Main():
         else:
             self.signal_wrapper.set_status_text.emit("请选中一个任务再提交")
 
-        self.task_change()
+        self.task_selected()
         self.signal_wrapper.ui_enabled.emit(True)
 
     def __create_version_thread(self):
         tr = td.Thread(target=self.create_version)
         tr .start()
 
-    def task_change(self):
+    def set_description_name(self, description):
+        task_id = self.main_widget.get_current_task_id()
+        # 当版本命名实例被创建和选中一个任务的时候，添加描述
+        if self.version_name and task_id:
+            self.version_name.description = description
+            self.main_widget.version_creator_widget.version_name_line_edit.setText(self.version_name.get_name())
+
+    def task_selected(self):
         self.signal_wrapper.ui_enabled.emit(False)
         task_id = self.main_widget.get_current_task_id()
         if task_id:
@@ -224,28 +237,35 @@ class Main():
                 self.main_widget.task_versions_widget.add_item(name, created_time, description)
 
             # 获取最新 version name
-            ver_num = util.get_max_ver_num(versins_name) + 1
-            project_name = ""
-            pipline_name = ""
-            link_name = ""
+            # 当前版本文件文件名
+            self.version_name = name_center.Version_Name()
+            # 版本号
+            self.version_name.ver = util.get_max_ver_num(versins_name) + 1
 
             project = task_info["project"]
             if project:
-                project_name = project["name"]
+                # 项目名
+                self.version_name.project = project["name"]
             pipline = task_info["step"]
             if pipline:
-                pipline_name = pipline["name"]
+                # 环节
+                self.version_name.pipline = pipline["name"]
             link = task_info["entity"]
             if link:
-                link_name = task_info["entity"]["name"]
-            new_version_name = name_config.version_name(project_name, link_name, pipline_name, ver_num)
-            self.main_widget.version_creator_widget.version_name_line_edit.setText(new_version_name)
+                # 镜头号/资产名
+                self.version_name.link = task_info["entity"]["name"]
+            # # 名称描述
+            # task_name = task_info["content"]
+            # if task_name:
+            #     self.main_widget.version_creator_widget.version_name_description.setPlaceholderText(task_name)
+            self.main_widget.version_creator_widget.clear_version_name()
+            self.main_widget.version_creator_widget.version_name_line_edit.setText(self.version_name.get_name())
 
             self.signal_wrapper.set_status_text.emit("完成")
         self.signal_wrapper.ui_enabled.emit(True)
 
-    def __task_change_thread(self):
-        tr = td.Thread(target=self.task_change)
+    def __task_selected_thread(self):
+        tr = td.Thread(target=self.task_selected)
         tr .start()
 
     def set_task_items(self):

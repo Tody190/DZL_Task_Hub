@@ -42,6 +42,13 @@ class Creator_Widget(QtWidgets.QWidget):
         # 版本名
         self.version_name_label = QtWidgets.QLabel("版本名: ")
         self.version_name_line_edit = QtWidgets.QLineEdit()
+        self.version_name_description_label = QtWidgets.QLabel("名称描述: ")
+        self.version_name_description = QtWidgets.QLineEdit()
+        self.version_name_description.setMaximumWidth(150)
+        version_name_layout = QtWidgets.QHBoxLayout()
+        version_name_layout.addWidget(self.version_name_line_edit)
+        version_name_layout.addWidget(self.version_name_description_label)
+        version_name_layout.addWidget(self.version_name_description)
         # 上传框
         self.uploaded_label = QtWidgets.QLabel("上传: ")
         self.uploaded_list = Drop_List()
@@ -73,7 +80,7 @@ class Creator_Widget(QtWidgets.QWidget):
         self.submit_button = QtWidgets.QPushButton("提交")
 
         form_layout = QtWidgets.QFormLayout(self)
-        form_layout.addRow(self.version_name_label, self.version_name_line_edit)
+        form_layout.addRow(self.version_name_label, version_name_layout)
         form_layout.addRow(self.uploaded_label, self.uploaded_layout)
         form_layout.addRow(self.description_label, self.description_text_edit)
         #form_layout.addRow(self.time_logged_label, self.time_logged_num_label)
@@ -87,9 +94,14 @@ class Creator_Widget(QtWidgets.QWidget):
 
     def clear_info(self):
         self.version_name_line_edit.clear()
+        self.version_name_description.clear()
         self.uploaded_list.clear()
         self.description_text_edit.clear()
         self.current_time_logged_spinbox.setValue(0)
+
+    def clear_version_name(self):
+        self.version_name_line_edit.clear()
+        self.version_name_description.clear()
 
     def add_uploaded_item(self, path):
         img_icon = QtGui.QIcon()
