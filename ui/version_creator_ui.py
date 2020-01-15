@@ -123,6 +123,8 @@ class Creator_Widget(QtWidgets.QWidget):
     def messagebox(self, type, info):
         if type == "warning":
             QtWidgets.QMessageBox.warning(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+        if type == "critical":
+            QtWidgets.QMessageBox.critical(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
         else:
             QtWidgets.QMessageBox.information(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
 

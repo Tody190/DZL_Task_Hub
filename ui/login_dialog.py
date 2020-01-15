@@ -19,6 +19,8 @@ class Dialog(QtWidgets.QDialog):
         self.__init_connect()
 
     def __init_ui(self):
+        self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
+
         self.setMinimumSize(350, 160)
         # shotgun url
         sgurl_label = QtWidgets.QLabel("shotgun 地址: ")
@@ -88,6 +90,17 @@ class Dialog(QtWidgets.QDialog):
             self.done(1)
         elif self.sender().text() == self.cancel:
             self.done(0)
+
+    def show_retry_messagebox(self, info):
+        self.close()
+        reply = QtWidgets.QMessageBox.critical(self,
+                                              "登陆失败",
+                                              info,
+                                              QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Retry)
+        if reply == QtWidgets.QMessageBox.Cancel:
+            self.close()
+        if reply == QtWidgets.QMessageBox.Retry:
+            self.show()
 
 
 

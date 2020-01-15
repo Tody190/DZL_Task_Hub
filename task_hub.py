@@ -137,7 +137,7 @@ class Main():
         # 清空 UI
         self.signal_wrapper.clear_ui.connect(self.main_widget.clear_ui)
         # 重新登录
-        self.main_widget.login_info_button.clicked.connect(self.relogin)
+        self.main_widget.login_info_button.clicked.connect(lambda :self.run(reset=True))
         # 设置底部状态栏
         self.signal_wrapper.set_status_text.connect(self.main_widget.set_status_text)
         # 任务切换
@@ -180,7 +180,7 @@ class Main():
             if version:
                 self.signal_wrapper.uploaded_status.emit("information", "提交成功")
             else:
-                self.signal_wrapper.uploaded_status.emit("warning", "提交失败,请重新提交")
+                self.signal_wrapper.uploaded_status.emit("critical", "提交失败,请重新提交")
         else:
             self.signal_wrapper.set_status_text.emit("请选中一个任务再提交")
 
@@ -366,27 +366,25 @@ class Main():
                 self.splash_screen.close()
                 # 显示登陆失败提示窗
                 if not db:
-                    reply = QtWidgets.QMessageBox.warning(self.login_dialog,
-                                                          "警告",
-                                                          "登陆失败,",
-                                                          QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Retry)
-                    if reply == QtWidgets.QMessageBox.Cancel:
-                        sys.exit(0)
+                    info = "请检查账号密码后，重新登录\n如果多次登录失败请联系管理员"
+                    self.login_dialog.show_retry_messagebox(info)
         return db
 
-    def relogin(self):
-        self.main_widget.close()
-        self.run(reset=True)
-
     def login(self, reset=False):
+        # 获取保存的账号密码登录
+        db = None
         if not reset:
             self.splash_screen.show_screen("welcome.jpg")
             db = self.__get_db()
             self.splash_screen.close()
         else:
-            db = None
+            self.main_widget.close()
+
+        # 从登录框获取账号密码登录
         while not db:
             db = self.show_login_dialog()
+
+
         print("login successful")
         print("current user: %s"%db.current_user)
         return db
@@ -402,10 +400,6 @@ class Main():
 def show():
     dezerlin_welcome.show(__author__, __version__)
     app = QtWidgets.QApplication()
-    # res_path = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])).replace('\\', '/'), "res")
-    # font_id = QtGui.QFontDatabase.addApplicationFont(os.path.join(res_path, "font/MSYHMONO.ttf"))
-    # font_name = QtGui.QFontDatabase.applicationFontFamilies(font_id)[0]
-    # app.setFont(QtGui.QFont(font_name))
     main = Main()
     main.run()
     sys.exit(app.exec_())
