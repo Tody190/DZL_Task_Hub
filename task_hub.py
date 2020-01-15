@@ -215,31 +215,28 @@ class Main():
             # 设置任务详情页
             self.signal_wrapper.set_status_text.emit("任务 %s 获取任务细节..." % task_id)
             task_info = db.get_task_info(task_id)
-            self.main_widget.task_info_widget.setRowCount(len(task_info))
+            task_info.pop("type")
             self.main_widget.task_info_widget.clear_items()
-            for k in task_info:
-                self.main_widget.task_info_widget.add_item(k, task_info[k])
+            self.main_widget.task_info_widget.add_items(task_info)
 
             # 设置版本详情页
             self.signal_wrapper.set_status_text.emit("任务 %s 获取版本信息..." % task_id)
-            versins_info = db.get_task_versions(task_id)
-            versins_info.reverse()
-            versins_name =[]
-            self.main_widget.task_versions_widget.setRowCount(len(versins_info))
+            versions_info = db.get_task_versions(task_id)
+            versions_info.reverse()
             self.main_widget.task_versions_widget.clear_items()
-            for version_entity in versins_info:
-                name = version_entity["code"]
-                versins_name.append(name)
-                created_time = version_entity["created_at"]
-                if created_time:
-                    created_time = created_time.strftime('%Y-%m-%d %H:%M:%S')
-                description = version_entity["description"]
-                self.main_widget.task_versions_widget.add_item(name, created_time, description)
+            if versions_info:
+                [version.pop("type") for version in versions_info]
+                head_labels = [str(head_label) for head_label in versions_info[0]]
+                items_info = []
+                for version_entity in versions_info:
+                    items_info.append([str(v) for v in version_entity.values()])
+                self.main_widget.task_versions_widget.add_item(head_labels, items_info)
 
             # 获取最新 version name
             # 当前版本文件文件名
             self.version_name = name_center.Version_Name()
             # 版本号
+            versins_name = [version_entity["code"] for version_entity in versions_info]
             self.version_name.ver = util.get_max_ver_num(versins_name) + 1
 
             project = task_info["project"]

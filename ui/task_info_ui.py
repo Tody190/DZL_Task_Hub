@@ -13,17 +13,19 @@ class Task_Info_Widget(QtWidgets.QTableWidget):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setVisible(False)
         self.setColumnCount(2)
-        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        self.horizontalHeader().setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeToContents)
-        self.row = 0
+        self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
+        self.horizontalHeader().setStretchLastSection(True)
 
     def clear_items(self):
-        self.row = 0
+        self.setRowCount(0)
         self.clear()
 
-    def add_item(self, label, info):
-        label_item = QtWidgets.QTableWidgetItem(label)
-        self.setItem(self.row, 0, label_item)
-        info_item = QtWidgets.QTableWidgetItem(str(info))
-        self.setItem(self.row, 1, info_item)
-        self.row += 1
+    def add_items(self, items_info):
+        self.setRowCount(len(items_info))
+        row = 0
+        for label in items_info:
+            label_item = QtWidgets.QTableWidgetItem(str(label))
+            self.setItem(row, 0, label_item)
+            info_item = QtWidgets.QTableWidgetItem(str(items_info[label]))
+            self.setItem(row, 1, info_item)
+            row += 1

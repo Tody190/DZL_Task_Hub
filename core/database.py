@@ -71,7 +71,7 @@ class SGDB:
         return self.sg.find_one("Task", filters, fields)
 
     def get_task_versions(self, task_id):
-        fields = ["code", "created_at", "description"]
+        fields = ["code", "sg_status_list", "created_at", "description"]
         filters = [["sg_task", "is",{"type": "Task", "id": int(task_id)}]]
         return self.sg.find("Version", filters, fields)
 
