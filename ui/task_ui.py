@@ -15,11 +15,10 @@ class Task_List_Widget(QtWidgets.QListWidget):
         # 添加搜索框
         self.search_line = QtWidgets.QLineEdit(self)
         self.search_line.setPlaceholderText("搜索")
-        main_layout = QtWidgets.QVBoxLayout()
+        main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 10, 0)
         main_layout.addStretch()
         main_layout.addWidget(self.search_line)
-        self.setLayout(main_layout)
         # 设置滑块宽度
         self.verticalScrollBar().setStyleSheet("QScrollBar{width:10px;}")
         # 连接搜索

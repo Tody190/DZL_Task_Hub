@@ -75,6 +75,9 @@ class SGDB:
         filters = [["sg_task", "is",{"type": "Task", "id": int(task_id)}]]
         return self.sg.find("Version", filters, fields)
 
+    def del_version(self, id):
+        return self.sg.delete("Version", id)
+
     def create_version(self, task_id, version_name, uploaded, description, logged_time):
         # 创建
         task_entity = self.get_task_info(task_id)
@@ -110,7 +113,7 @@ class SGDB:
                 raise Exception("sg_uploaded_movie is empty")
         except Exception as e:
             print(e)
-            self.sg.delete("Version", version_id)
+            self.del_version(version_id)
             return
 
         # 添加任务 timelogged

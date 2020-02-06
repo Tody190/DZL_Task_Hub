@@ -16,6 +16,8 @@ class Task_Info_Widget(QtWidgets.QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.horizontalHeader().setStretchLastSection(True)
 
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+
     def clear_items(self):
         self.setRowCount(0)
         self.clear()

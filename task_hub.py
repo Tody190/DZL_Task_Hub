@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 __author__ = "yangtao"
-__version__ = '1.3'
+__version__ = '1.4'
 
 
 import sys
 import os
 import threading as td
+import datetime
 
 from PySide2 import QtWidgets
 from PySide2 import QtCore
@@ -14,6 +15,7 @@ import xmlrpc
 import xmlrpc.client
 
 import dezerlin_welcome
+import config
 from ui import main_ui
 from ui import login_dialog
 from ui import splash_screen
@@ -35,6 +37,10 @@ class Signal_Wrapper(QtCore.QObject):
     set_task_item = QtCore.Signal(str, str, list, int)
     clear_ui = QtCore.Signal()
     uploaded_status = QtCore.Signal(str, str)
+    set_version_ui_info = QtCore.Signal(list, list)
+    set_version_ui_heads = QtCore.Signal(list)
+    set_version_ui_item = QtCore.Signal(int, datetime.datetime, list)
+    set_task_ui_info = QtCore.Signal(dict)
 
     def __init__(self):
         super(Signal_Wrapper, self).__init__()
@@ -120,7 +126,7 @@ class Main():
         # 项目改变保存当前项目名
         self.main_widget.project_combobox.activated[str].connect(self.settings.save_current_project)
         # 项目改变重置筛选栏
-        self.main_widget.project_combobox.activated.connect(self.__init_filter_data_thread)
+        self.main_widget.project_combobox.activated.connect(lambda :self.new_thread_run(self.init_filter_data))
         # 添加项目
         self.signal_wrapper.set_projects.connect(self.main_widget.set_project_combobox_items)
         # 设置当前项目
@@ -135,7 +141,7 @@ class Main():
         self.main_widget.limit_slider.sliderReleased.connect(lambda :self.settings.save_slider_position(
                                                                  self.main_widget.limit_slider.value()))
         # 加载按钮
-        self.main_widget.load_button.clicked.connect(self.__set_task_items_thread)
+        self.main_widget.load_button.clicked.connect(lambda :self.new_thread_run(self.set_task_items))
         # 设置任务
         self.signal_wrapper.set_task_item.connect(self.main_widget.task_listWidget.set_task_item)
         # 清空 UI
@@ -145,20 +151,62 @@ class Main():
         # 设置底部状态栏
         self.signal_wrapper.set_status_text.connect(self.main_widget.set_status_text)
         # 任务切换
-        self.main_widget.task_listWidget.currentItemChanged.connect(self.__task_selected_thread)
+        self.main_widget.task_listWidget.currentItemChanged.connect(lambda :self.new_thread_run(self.task_selected))
         # 提交
-        self.main_widget.version_creator_widget.submit_button.clicked.connect(self.__create_version_thread)
+        self.main_widget.version_creator_widget.submit_button.clicked.connect(lambda :self.new_thread_run(self.create_version))
         # 跳转到 shotgun
         self.main_widget.task_listWidget.itemDoubleClicked.connect(self.jump_to_shotgun)
         # 提交状态信息提示框
         self.signal_wrapper.uploaded_status.connect(self.main_widget.version_creator_widget.messagebox)
+
         # 版本名描述添加到版本名
         self.main_widget.version_creator_widget.version_name_description.textChanged.connect(self.set_description_name)
+        # 向任务详情页添加信息
+        self.signal_wrapper.set_task_ui_info.connect(self.main_widget.task_info_widget.add_items)
+        # 向版本详情页面添加信息
+        self.signal_wrapper.set_version_ui_info.connect(self.main_widget.task_versions_widget.add_items)
+        # 向版本详情页面添加头
+        self.signal_wrapper.set_version_ui_heads.connect(self.main_widget.task_versions_widget.set_head_labels)
+        # 向版本详情页面添加一项
+        self.signal_wrapper.set_version_ui_item.connect(self.main_widget.task_versions_widget.add_item)
+        # 选中版本详情某一项
+        self.main_widget.task_versions_widget.itemClicked.connect(self.select_version_item)
+        # 删除版本
+        self.main_widget.task_versions_widget.del_button.clicked.connect(lambda :self.new_thread_run(self.del_version))
+
+    def new_thread_run(self, target):
+        tr = td.Thread(target=target)
+        tr .start()
+
+    def del_version(self):
+        selected_items = self.main_widget.task_versions_widget.selectedItems()
+        if selected_items:
+            db = self.__get_db()
+            selected_item_id = selected_items[0].id
+            self.signal_wrapper.set_status_text.emit("正在删除版本 %s" % (str(selected_item_id)))
+            result = db.del_version(selected_item_id)
+            if not result:
+                self.signal_wrapper.set_status_text.emit("删除失败")
+            else:
+                self.task_selected(db=db)
+
+    def select_version_item(self, item):
+        created_time = item.created_time.replace(tzinfo=None)
+        if not created_time:
+            self.main_widget.task_versions_widget.del_button.setVisible(False)
+
+        current_time = datetime.datetime.now()
+        timedelta = current_time - created_time
+        max_timedelta = datetime.timedelta(config.version_del_time_hours)
+        if timedelta > max_timedelta:
+            self.main_widget.task_versions_widget.del_button.setVisible(False)
+        else:
+            self.main_widget.task_versions_widget.del_button.setVisible(True)
 
     def jump_to_shotgun(self, item):
         task_id = item.id
         sgurl, logname, password, user = self.settings.get_login_info()
-        task_url = "%s/detail/Task/%s"%(sgurl, str(task_id))
+        task_url = config.sg_task_url.format(sgurl = sgurl, id = str(task_id))
         os.startfile(task_url)
         print("jump to %s"%task_url)
 
@@ -190,12 +238,8 @@ class Main():
         else:
             self.signal_wrapper.set_status_text.emit("请选中一个任务再提交")
 
-        self.task_selected()
+        self.task_selected(db=db)
         self.signal_wrapper.ui_enabled.emit(True)
-
-    def __create_version_thread(self):
-        tr = td.Thread(target=self.create_version)
-        tr .start()
 
     def set_description_name(self, description):
         task_id = self.main_widget.get_current_task_id()
@@ -204,20 +248,25 @@ class Main():
             self.version_name.description = description
             self.main_widget.version_creator_widget.version_name_line_edit.setText(self.version_name.get_name())
 
-    def task_selected(self):
+    def task_selected(self, db=None):
+        # 隐藏删除按钮
+        self.main_widget.task_versions_widget.del_button.setVisible(False)
         self.signal_wrapper.ui_enabled.emit(False)
         task_id = self.main_widget.get_current_task_id()
         if task_id:
             # 锁工具栏
             self.main_widget.tools_tab_widget.setEnabled(True)
 
-            db = self.__get_db()
+            if not db:
+                db = self.__get_db()
+
             # 设置任务详情页
             self.signal_wrapper.set_status_text.emit("任务 %s 获取任务细节..." % task_id)
             task_info = db.get_task_info(task_id)
             task_info.pop("type")
             self.main_widget.task_info_widget.clear_items()
-            self.main_widget.task_info_widget.add_items(task_info)
+            #self.main_widget.task_info_widget.add_items(task_info)
+            self.signal_wrapper.set_task_ui_info.emit(task_info)
 
             # 设置版本详情页
             self.signal_wrapper.set_status_text.emit("任务 %s 获取版本信息..." % task_id)
@@ -227,10 +276,14 @@ class Main():
             if versions_info:
                 [version.pop("type") for version in versions_info]
                 head_labels = [str(head_label) for head_label in versions_info[0]]
-                items_info = []
+                # 添加头
+                self.signal_wrapper.set_version_ui_heads.emit(head_labels)
+                # 添加项
                 for version_entity in versions_info:
-                    items_info.append([str(v) for v in version_entity.values()])
-                self.main_widget.task_versions_widget.add_item(head_labels, items_info)
+                    id = version_entity["id"]
+                    created_time = version_entity["created_at"]
+                    item_info = [str(v) for v in version_entity.values()]
+                    self.signal_wrapper.set_version_ui_item.emit(id, created_time, item_info)
 
             # 获取最新 version name
             # 当前版本文件文件名
@@ -260,10 +313,6 @@ class Main():
 
             self.signal_wrapper.set_status_text.emit("完成")
         self.signal_wrapper.ui_enabled.emit(True)
-
-    def __task_selected_thread(self):
-        tr = td.Thread(target=self.task_selected)
-        tr .start()
 
     def set_task_items(self):
         self.signal_wrapper.clear_ui.emit()
@@ -304,10 +353,6 @@ class Main():
         self.signal_wrapper.ui_enabled.emit(True)
         self.signal_wrapper.set_status_text.emit("找到 %s 个任务"%len(tasks_entity))
 
-    def __set_task_items_thread(self):
-        tr = td.Thread(target=self.set_task_items)
-        tr .start()
-
     def init_filter_data(self):
         # 锁住功能栏
         self.signal_wrapper.ui_enabled.emit(False)
@@ -347,10 +392,6 @@ class Main():
             self.signal_wrapper.ui_enabled.emit(True)
             self.signal_wrapper.set_status_text.emit("完成")
 
-    def __init_filter_data_thread(self):
-        tr = td.Thread(target=self.init_filter_data)
-        tr.start()
-
     def __get_db(self):
         sgurl, logname, password, user = self.settings.get_login_info()
         if sgurl and logname and password and user:
@@ -363,7 +404,7 @@ class Main():
     def show_main_ui(self):
         self.main_widget.show()
         # 将数据初始化放到独立线程，防止界面卡顿
-        self.__init_filter_data_thread()
+        self.new_thread_run(self.init_filter_data)
 
     def show_login_dialog(self):
         # 设置登录框显示上次保存的内容
