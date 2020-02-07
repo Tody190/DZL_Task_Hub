@@ -85,7 +85,7 @@ class Main_Widget(QtWidgets.QWidget):
         status_bar_layout.setSpacing(0)
         status_bar_widget = QtWidgets.QWidget()
         status_bar_widget.setLayout(status_bar_layout)
-        status_bar_widget.setMaximumHeight(20)
+        status_bar_widget.setMaximumHeight(30)
 
         # main layout
         main_layout = QtWidgets.QVBoxLayout(self)

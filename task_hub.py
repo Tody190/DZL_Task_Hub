@@ -10,15 +10,17 @@ import datetime
 
 from PySide2 import QtWidgets
 from PySide2 import QtCore
+from PySide2 import QtGui
 # pyinstaller 打包引用模块
 import xmlrpc
 import xmlrpc.client
 
 import dezerlin_welcome
 import config
+from ui import base64_pic
 from ui import main_ui
 from ui import login_dialog
-from ui import splash_screen
+#from ui import splash_screen
 from core import secrets_tool
 from core import database
 from core import util
@@ -96,11 +98,16 @@ class Main():
         self.settings = Submitter_Setting()
         # 获取资源路径
         self.res_path = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])).replace('\\', '/'), "res")
-        self.login_dialog_icon = os.path.join(self.res_path, "icon/login.ico")
-        self.main_widget_icon = os.path.join(self.res_path, "icon/task.ico")
+        #self.login_dialog_icon = os.path.join(self.res_path, "icon/login.ico")
+        self.login_dialog_icon =base64_pic.get_res("login.ico")
+        #self.main_widget_icon = os.path.join(self.res_path, "icon/task.ico")
+        self.main_widget_icon = base64_pic.get_res("task.ico")
 
-        # # 实例化启动画面
-        self.splash_screen = splash_screen.Screen(os.path.join(self.res_path, "screen"))
+        # 实例化启动画面
+        # self.splash_screen = splash_screen.Screen(os.path.join(self.res_path, "screen"))
+        # #self.splash_screen = splash_screen.Screen(base64_pic.get_res("welcome"))
+        self.welcome_screen = QtWidgets.QSplashScreen()
+        self.welcome_screen.setPixmap(QtGui.QPixmap(base64_pic.get_res("welcome.jpg")))
 
         # 实例化登录框
         self.login_dialog = login_dialog.Dialog()
@@ -197,7 +204,7 @@ class Main():
 
         current_time = datetime.datetime.now()
         timedelta = current_time - created_time
-        max_timedelta = datetime.timedelta(config.version_del_time_hours)
+        max_timedelta = datetime.timedelta(hours=config.version_del_time_hours)
         if timedelta > max_timedelta:
             self.main_widget.task_versions_widget.del_button.setVisible(False)
         else:
@@ -334,19 +341,19 @@ class Main():
             subtitle = ""
             if entity:
                 title = entity["name"]
-                subtitle = entity["type"]
-
+                subtitle = te["sg_status_list"]
+                #subtitle = entity["type"]
             info = []
             content = te["content"]
             if content:
                 info.append(content)
-            status = te["sg_status_list"]
-            if status:
-                info.append(status)
-            start_date = str(te["start_date"])
-            due_date = str(te["due_date"])
+            type = entity["type"]
+            if type:
+                info.append(type)
+            start_date = te["start_date"]
+            due_date = te["due_date"]
             if start_date and due_date:
-                info.append("%s - %s"%(start_date, due_date))
+                info.append("%s -- %s"%(str(start_date), str(due_date)))
 
             self.signal_wrapper.set_task_item.emit(title, subtitle, info, id)
 
@@ -419,9 +426,9 @@ class Main():
             if result == 0:
                 sys.exit(0)
             if result == 1:
-                self.splash_screen.show_screen("welcome.jpg")
+                self.welcome_screen.show()
                 db = self.__get_db()
-                self.splash_screen.close()
+                self.welcome_screen.close()
                 # 显示登陆失败提示窗
                 if not db:
                     info = "请检查账号密码后，重新登录\n如果多次登录失败请联系管理员"
@@ -432,9 +439,9 @@ class Main():
         # 获取保存的账号密码登录
         db = None
         if not reset:
-            self.splash_screen.show_screen("welcome.jpg")
+            self.welcome_screen.show()
             db = self.__get_db()
-            self.splash_screen.close()
+            self.welcome_screen.close()
         else:
             self.main_widget.close()
 

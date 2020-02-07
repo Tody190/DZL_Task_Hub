@@ -24,11 +24,12 @@ class Versions_Widget(QtWidgets.QTableWidget):
         self.del_button = QtWidgets.QPushButton(self)
         self.del_button.setText("删除")
         self.del_button.setVisible(False)
-        self.del_button.setMaximumWidth(70)
+        #self.del_button.setMaximumWidth(100)
         main_layout = QtWidgets.QVBoxLayout(self)
+        main_layout.setContentsMargins(30, 0, 30, 10)
         main_layout.addStretch()
         main_layout.addWidget(self.del_button)
-        main_layout.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
+        #main_layout.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignVCenter)
 
     def clear_items(self):
         self.setColumnCount(0)

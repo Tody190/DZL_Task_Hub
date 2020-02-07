@@ -43,20 +43,22 @@ class Dialog(QtWidgets.QDialog):
         self.login_button.setDefault(True)
 
         # layout
-        form_layout = QtWidgets.QFormLayout()
-        form_layout.setLabelAlignment(QtCore.Qt.AlignRight)
-        form_layout.setFormAlignment(QtCore.Qt.AlignLeft)
-        form_layout.addRow(sgurl_label, self.sgurl_edit)
-        form_layout.addRow(logname_label, self.logname_edit)
-        form_layout.addRow(password_label, self.password_edit)
-        form_layout.addRow(user_label, self.user_edit)
+        grid_layout = QtWidgets.QGridLayout()
+        grid_layout.addWidget(sgurl_label, 0, 0)
+        grid_layout.addWidget(self.sgurl_edit, 0, 1)
+        grid_layout.addWidget(logname_label, 1, 0)
+        grid_layout.addWidget(self.logname_edit, 1, 1)
+        grid_layout.addWidget(password_label, 2, 0)
+        grid_layout.addWidget(self.password_edit, 2, 1)
+        grid_layout.addWidget(user_label, 3, 0)
+        grid_layout.addWidget(self.user_edit, 3, 1)
 
         button_groups = QtWidgets.QHBoxLayout()
         button_groups.addWidget(self.cancel_button)
         button_groups.addWidget(self.login_button)
 
         main_layout = QtWidgets.QVBoxLayout(self)
-        main_layout.addLayout(form_layout)
+        main_layout.addLayout(grid_layout)
         main_layout.addLayout(button_groups)
 
     def __init_connect(self):
