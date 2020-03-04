@@ -4,6 +4,7 @@ __author__ = "yangtao"
 
 from PySide2 import QtWidgets
 from PySide2 import QtCore
+from core import language
 
 
 
@@ -12,9 +13,13 @@ class Task_List_Widget(QtWidgets.QListWidget):
     def __init__(self, parent=None):
         super(Task_List_Widget, self).__init__(parent)
 
+        # 界面语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         # 添加搜索框
         self.search_line = QtWidgets.QLineEdit(self)
-        self.search_line.setPlaceholderText("搜索")
+        self.search_line.setPlaceholderText(self.current_lan.search)
         main_layout = QtWidgets.QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 10, 0)
         main_layout.addStretch()

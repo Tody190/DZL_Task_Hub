@@ -4,6 +4,7 @@ __author__ = "yangtao"
 
 from PySide2 import QtWidgets
 from PySide2 import QtCore
+from core import language
 
 
 
@@ -11,6 +12,11 @@ from PySide2 import QtCore
 class Versions_Widget(QtWidgets.QTableWidget):
     def __init__(self):
         super(Versions_Widget, self).__init__()
+
+        # 界面语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         self.verticalHeader().setHidden(True)
         self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.ResizeToContents)
         self.horizontalHeader().setStretchLastSection(True)
@@ -22,7 +28,7 @@ class Versions_Widget(QtWidgets.QTableWidget):
         self.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
         # 添加删除按钮
         self.del_button = QtWidgets.QPushButton(self)
-        self.del_button.setText("删除")
+        self.del_button.setText(self.current_lan.delete)
         self.del_button.setVisible(False)
         #self.del_button.setMaximumWidth(100)
         main_layout = QtWidgets.QVBoxLayout(self)

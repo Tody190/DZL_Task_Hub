@@ -11,6 +11,7 @@ from ui import task_ui
 from ui import version_creator_ui
 from ui import task_info_ui
 from ui import version_ui
+from core import language
 
 
 
@@ -20,6 +21,10 @@ class Main_Widget(QtWidgets.QWidget):
         super(Main_Widget, self).__init__(parent)
         self.main_widget_settings = QtCore.QSettings("dezerlin_soft", "submitter")
 
+        # 界面语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         self.__init_ui()
         self.__init_connect()
 
@@ -27,7 +32,7 @@ class Main_Widget(QtWidgets.QWidget):
         self.setMinimumSize(900, 600)
         # filter
         # project
-        project_label = QtWidgets.QLabel("项目")
+        project_label = QtWidgets.QLabel(self.current_lan.project)
         self.project_combobox = QtWidgets.QComboBox()
         # self.project_combobox.setEditable(True)
         self.project_combobox.setMinimumWidth(80)
@@ -35,11 +40,11 @@ class Main_Widget(QtWidgets.QWidget):
         self.limit_label = QtWidgets.QLabel()
         self.limit_slider = QtWidgets.QSlider(QtCore.Qt.Horizontal)
         # status
-        task_status_label = QtWidgets.QLabel("状态")
+        task_status_label = QtWidgets.QLabel(self.current_lan.status)
         self.task_status_combobox = QtWidgets.QComboBox()
         self.task_status_combobox.setMinimumWidth(120)
         # load button
-        self.load_button = QtWidgets.QPushButton("加载")
+        self.load_button = QtWidgets.QPushButton(self.current_lan.load)
         # filter layout
         filter_layout = QtWidgets.QHBoxLayout()
         filter_layout.addWidget(project_label)
@@ -59,10 +64,10 @@ class Main_Widget(QtWidgets.QWidget):
 
         self.tools_tab_widget = QtWidgets.QTabWidget()
         self.task_info_widget = task_info_ui.Task_Info_Widget()
-        self.tools_tab_widget.addTab(self.task_info_widget, "详情")
+        self.tools_tab_widget.addTab(self.task_info_widget, self.current_lan.details)
         self.task_versions_widget = version_ui.Versions_Widget()
-        self.tools_tab_widget.addTab(self.task_versions_widget, "版本")
-        self.tools_tab_widget.addTab(self.version_creator_widget, "提交")
+        self.tools_tab_widget.addTab(self.task_versions_widget, self.current_lan.versions)
+        self.tools_tab_widget.addTab(self.version_creator_widget, self.current_lan.submit)
         self.tools_tab_widget.setCurrentIndex(self.main_widget_settings.value("tools_current_tab_index", 0))
 
         # 内容布局
@@ -103,9 +108,9 @@ class Main_Widget(QtWidgets.QWidget):
     def __set_slider_label(self):
         value = self.limit_slider.value()
         if value == self.limit_slider.maximum():
-            self.limit_label.setText("显示所有")
+            self.limit_label.setText(self.current_lan.limit_all)
         else:
-            self.limit_label.setText("显示最近%s个"%str(self.limit_slider.value()))
+            self.limit_label.setText(self.current_lan.limit%str(self.limit_slider.value()))
 
     def get_current_task_id(self):
         current_item = self.task_listWidget.currentItem()

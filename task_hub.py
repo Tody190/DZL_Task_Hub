@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 __author__ = "yangtao"
-__version__ = '1.4'
+__version__ = '1.5'
 
 
 import sys
 import os
 import threading as td
+import multiprocessing as mp
 import datetime
 
 from PySide2 import QtWidgets
@@ -20,11 +21,11 @@ import config
 from ui import base64_pic
 from ui import main_ui
 from ui import login_dialog
-#from ui import splash_screen
 from core import secrets_tool
 from core import database
 from core import util
 from core import name_center
+from core import language
 
 
 
@@ -88,6 +89,12 @@ class Submitter_Setting():
     def get_slider_position(self):
         return self.settings.value("slider_position", 0)
 
+    def save_current_language(self, language_name):
+        self.settings.setValue("language", language_name)
+
+    def get_current_language(self):
+        self.settings.value("language", None)
+
 
 class Main():
     def __init__(self):
@@ -98,24 +105,26 @@ class Main():
         self.settings = Submitter_Setting()
         # 获取资源路径
         self.res_path = os.path.join(os.path.dirname(os.path.realpath(sys.argv[0])).replace('\\', '/'), "res")
-        #self.login_dialog_icon = os.path.join(self.res_path, "icon/login.ico")
         self.login_dialog_icon =base64_pic.get_res("login.ico")
-        #self.main_widget_icon = os.path.join(self.res_path, "icon/task.ico")
         self.main_widget_icon = base64_pic.get_res("task.ico")
 
         # 实例化启动画面
-        # self.splash_screen = splash_screen.Screen(os.path.join(self.res_path, "screen"))
-        # #self.splash_screen = splash_screen.Screen(base64_pic.get_res("welcome"))
         self.welcome_screen = QtWidgets.QSplashScreen()
         self.welcome_screen.setPixmap(QtGui.QPixmap(base64_pic.get_res("welcome.jpg")))
 
+        # 获取当前语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         # 实例化登录框
         self.login_dialog = login_dialog.Dialog()
-        self.login_dialog.set_title("登录到 shotgun", self.login_dialog_icon)
+        # 初始化语言选项
+        self.login_dialog.set_language_box(self.lan.language_list, self.lan.get_language_name())
+        self.login_dialog.set_title(self.current_lan.login_title, self.login_dialog_icon)
 
         # 实例化主窗口
         self.main_widget = main_ui.Main_Widget()
-        # 设置 "显示最近"的最大最小值
+        # 设置 "显示最近" 的最大最小值
         self.main_widget.set_last_show_range(1, 100, self.settings.get_slider_position())
         # 设置图标和名称
         self.main_widget.set_title("DZL Task Hub", self.main_widget_icon)
@@ -165,7 +174,6 @@ class Main():
         self.main_widget.task_listWidget.itemDoubleClicked.connect(self.jump_to_shotgun)
         # 提交状态信息提示框
         self.signal_wrapper.uploaded_status.connect(self.main_widget.version_creator_widget.messagebox)
-
         # 版本名描述添加到版本名
         self.main_widget.version_creator_widget.version_name_description.textChanged.connect(self.set_description_name)
         # 向任务详情页添加信息
@@ -180,6 +188,14 @@ class Main():
         self.main_widget.task_versions_widget.itemClicked.connect(self.select_version_item)
         # 删除版本
         self.main_widget.task_versions_widget.del_button.clicked.connect(lambda :self.new_thread_run(self.del_version))
+        # 设置当前语言
+        self.login_dialog.language_combobox.activated[str].connect(self.switch_language)
+
+    def switch_language(self, language_name):
+        self.settings.save_current_language(language_name)
+        self.login_dialog.done(0)
+        new_ui = mp.Process(target=show, args=(True,))
+        new_ui.start()
 
     def new_thread_run(self, target):
         tr = td.Thread(target=target)
@@ -190,10 +206,10 @@ class Main():
         if selected_items:
             db = self.__get_db()
             selected_item_id = selected_items[0].id
-            self.signal_wrapper.set_status_text.emit("正在删除版本 %s" % (str(selected_item_id)))
+            self.signal_wrapper.set_status_text.emit(self.current_lan.del_version % (str(selected_item_id)))
             result = db.del_version(selected_item_id)
             if not result:
-                self.signal_wrapper.set_status_text.emit("删除失败")
+                self.signal_wrapper.set_status_text.emit(self.current_lan.failed_delete)
             else:
                 self.task_selected(db=db)
 
@@ -227,11 +243,11 @@ class Main():
             for k in upload_info:
                 value = upload_info[k]
                 if not value:
-                    self.signal_wrapper.set_status_text.emit("信息不全，请补全后重新提交")
+                    self.signal_wrapper.set_status_text.emit(self.current_lan.incomplete_sub_retry)
                     self.signal_wrapper.ui_enabled.emit(True)
                     return
             # 提交
-            self.signal_wrapper.set_status_text.emit("任务 %s 提交中..."%task_id)
+            self.signal_wrapper.set_status_text.emit(self.current_lan.sub_task%task_id)
             db = self.__get_db()
             version = db.create_version(task_id,
                                         version_name=upload_info["version_name"],
@@ -239,13 +255,13 @@ class Main():
                                         description=upload_info["description"],
                                         logged_time=upload_info["logged_time"])
             if version:
-                self.signal_wrapper.uploaded_status.emit("information", "提交成功")
+                self.signal_wrapper.uploaded_status.emit("information", self.current_lan.sub_successfully)
             else:
-                self.signal_wrapper.uploaded_status.emit("critical", "提交失败,请重新提交")
+                self.signal_wrapper.uploaded_status.emit("critical", self.current_lan.failed_sub_retry)
+            self.task_selected(db=db)
         else:
-            self.signal_wrapper.set_status_text.emit("请选中一个任务再提交")
+            self.signal_wrapper.set_status_text.emit(self.current_lan.select_task_submit)
 
-        self.task_selected(db=db)
         self.signal_wrapper.ui_enabled.emit(True)
 
     def set_description_name(self, description):
@@ -268,7 +284,7 @@ class Main():
                 db = self.__get_db()
 
             # 设置任务详情页
-            self.signal_wrapper.set_status_text.emit("任务 %s 获取任务细节..." % task_id)
+            self.signal_wrapper.set_status_text.emit(self.current_lan.get_task_details % task_id)
             task_info = db.get_task_info(task_id)
             task_info.pop("type")
             self.main_widget.task_info_widget.clear_items()
@@ -276,7 +292,7 @@ class Main():
             self.signal_wrapper.set_task_ui_info.emit(task_info)
 
             # 设置版本详情页
-            self.signal_wrapper.set_status_text.emit("任务 %s 获取版本信息..." % task_id)
+            self.signal_wrapper.set_status_text.emit(self.current_lan.get_version_details % task_id)
             versions_info = db.get_task_versions(task_id)
             versions_info.reverse()
             self.main_widget.task_versions_widget.clear_items()
@@ -318,13 +334,13 @@ class Main():
             self.main_widget.version_creator_widget.clear_version_name()
             self.main_widget.version_creator_widget.version_name_line_edit.setText(self.version_name.get_name())
 
-            self.signal_wrapper.set_status_text.emit("完成")
+            self.signal_wrapper.set_status_text.emit(self.current_lan.complete)
         self.signal_wrapper.ui_enabled.emit(True)
 
     def set_task_items(self):
         self.signal_wrapper.clear_ui.emit()
         self.signal_wrapper.ui_enabled.emit(False)
-        self.signal_wrapper.set_status_text.emit("正在从 shotgun 拉取数据...")
+        self.signal_wrapper.set_status_text.emit(self.current_lan.get_sg_data)
 
         db = self.__get_db()
         project, task_status, limit_num = self.main_widget.get_current_filter_info()
@@ -358,7 +374,7 @@ class Main():
             self.signal_wrapper.set_task_item.emit(title, subtitle, info, id)
 
         self.signal_wrapper.ui_enabled.emit(True)
-        self.signal_wrapper.set_status_text.emit("找到 %s 个任务"%len(tasks_entity))
+        self.signal_wrapper.set_status_text.emit(self.current_lan.find_task%len(tasks_entity))
 
     def init_filter_data(self):
         # 锁住功能栏
@@ -367,10 +383,10 @@ class Main():
         self.signal_wrapper.clear_ui.emit()
 
         # 独立线程重新获取 db
-        self.signal_wrapper.set_status_text.emit("正在从 shotgun 拉取数据...")
+        self.signal_wrapper.set_status_text.emit(self.current_lan.get_sg_data)
         db = self.__get_db()
         # 将项目名添加到 combobox
-        self.signal_wrapper.set_status_text.emit("获取项目...")
+        self.signal_wrapper.set_status_text.emit(self.current_lan.get_projects)
         projects_entity = db.get_proejcts()
         all_projects_name = [entity["name"] for entity in projects_entity]
         self.signal_wrapper.set_projects.emit(all_projects_name)
@@ -387,7 +403,7 @@ class Main():
             current_index = self.main_widget.project_combobox.currentIndex()
             current_project_entity = projects_entity[current_index]
             # 获取任务状态
-            self.signal_wrapper.set_status_text.emit("获取状态...")
+            self.signal_wrapper.set_status_text.emit(self.current_lan.get_status)
             task_display_status = db.get_task_display_status(current_project_entity)
             task_display_status.insert(0, "All")
             self.signal_wrapper.set_task_status.emit(task_display_status)
@@ -397,7 +413,7 @@ class Main():
                 self.signal_wrapper.set_current_task_status.emit(save_status_name)
             # 将 filter 控件开启
             self.signal_wrapper.ui_enabled.emit(True)
-            self.signal_wrapper.set_status_text.emit("完成")
+            self.signal_wrapper.set_status_text.emit(self.current_lan.complete)
 
     def __get_db(self):
         sgurl, logname, password, user = self.settings.get_login_info()
@@ -431,7 +447,7 @@ class Main():
                 self.welcome_screen.close()
                 # 显示登陆失败提示窗
                 if not db:
-                    info = "请检查账号密码后，重新登录\n如果多次登录失败请联系管理员"
+                    info = self.current_lan.login_failed_info
                     self.login_dialog.show_retry_messagebox(info)
         return db
 
@@ -462,11 +478,11 @@ class Main():
             self.show_main_ui()
 
 
-def show():
+def show(reset=False):
     dezerlin_welcome.show(__author__, __version__)
     app = QtWidgets.QApplication()
     main = Main()
-    main.run()
+    main.run(reset)
     sys.exit(app.exec_())
 
 

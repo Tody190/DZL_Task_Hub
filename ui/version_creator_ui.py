@@ -7,6 +7,7 @@ import os
 from PySide2 import QtWidgets
 from PySide2 import QtGui
 from PySide2 import QtCore
+from core import language
 
 class Drop_List(QtWidgets.QListWidget):
     drop_file = QtCore.Signal(str)
@@ -35,14 +36,19 @@ class Drop_List(QtWidgets.QListWidget):
 class Creator_Widget(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super(Creator_Widget, self).__init__(parent)
+
+        # 界面语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         self.__init_ui()
         self.__init_connect()
 
     def __init_ui(self):
         # 版本名
-        self.version_name_label = QtWidgets.QLabel("版本名：")
+        self.version_name_label = QtWidgets.QLabel(self.current_lan.version_name)
         self.version_name_line_edit = QtWidgets.QLineEdit()
-        self.version_name_description_label = QtWidgets.QLabel("名称描述：")
+        self.version_name_description_label = QtWidgets.QLabel(self.current_lan.name_description)
         self.version_name_description = QtWidgets.QLineEdit()
         self.version_name_description.setMaximumWidth(150)
         version_name_layout = QtWidgets.QHBoxLayout()
@@ -50,7 +56,7 @@ class Creator_Widget(QtWidgets.QWidget):
         version_name_layout.addWidget(self.version_name_description_label)
         version_name_layout.addWidget(self.version_name_description)
         # 上传框
-        self.uploaded_label = QtWidgets.QLabel("上传：")
+        self.uploaded_label = QtWidgets.QLabel(self.current_lan.upload)
         self.uploaded_list = Drop_List()
         self.uploaded_list.setMaximumHeight(60)
         self.uploaded_list.setViewMode(QtWidgets.QListView.IconMode)
@@ -60,25 +66,25 @@ class Creator_Widget(QtWidgets.QWidget):
         self.uploaded_list.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         self.uploaded_list.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
         # 清空上传按钮
-        self.clear_uploaded_button = QtWidgets.QPushButton("清空")
+        self.clear_uploaded_button = QtWidgets.QPushButton(self.current_lan.clear)
         self.uploaded_layout = QtWidgets.QVBoxLayout()
         self.uploaded_layout.addWidget(self.uploaded_list)
         self.uploaded_layout.addWidget(self.clear_uploaded_button)
         self.uploaded_layout.setSpacing(0)
         self.uploaded_layout.setMargin(0)
         # 描述
-        self.description_label = QtWidgets.QLabel("描述：")
+        self.description_label = QtWidgets.QLabel(self.current_lan.description)
         self.description_text_edit = QtWidgets.QTextEdit()
         # # 任务总用时
         # self.time_logged_label = QtWidgets.QLabel("任务总用时")
         # self.time_logged_num_label = QtWidgets.QLabel("0天")
         # 当前版本用时
-        self.current_time_logged_label = QtWidgets.QLabel("用时（天）：")
+        self.current_time_logged_label = QtWidgets.QLabel(self.current_lan.time_logged)
         self.current_time_logged_spinbox = QtWidgets.QSpinBox()
         self.current_time_logged_spinbox.setMaximumWidth(50)
         self.current_time_logged_spinbox.setMaximum(999)
         # 提交按钮
-        self.submit_button = QtWidgets.QPushButton("提交")
+        self.submit_button = QtWidgets.QPushButton(self.current_lan.submit)
 
         grid_layout = QtWidgets.QGridLayout(self)
         grid_layout.addWidget(self.version_name_label, 0, 0)
@@ -141,11 +147,11 @@ class Creator_Widget(QtWidgets.QWidget):
     @QtCore.Slot(str, str)
     def messagebox(self, type, info):
         if type == "warning":
-            QtWidgets.QMessageBox.warning(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.warning(self, self.current_lan.submission_status, info, QtWidgets.QMessageBox.Ok)
         if type == "critical":
-            QtWidgets.QMessageBox.critical(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.critical(self, self.current_lan.submission_status, info, QtWidgets.QMessageBox.Ok)
         else:
-            QtWidgets.QMessageBox.information(self, '提交状态', info, QtWidgets.QMessageBox.Ok)
+            QtWidgets.QMessageBox.information(self, self.current_lan.submission_status, info, QtWidgets.QMessageBox.Ok)
 
 
 

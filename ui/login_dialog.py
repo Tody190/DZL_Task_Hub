@@ -5,6 +5,7 @@ import sys
 from PySide2 import QtWidgets
 from PySide2 import QtCore
 from PySide2 import QtGui
+from core import language
 
 
 
@@ -15,28 +16,34 @@ class Dialog(QtWidgets.QDialog):
         self.ok = "OK"
         self.cancel = "Cancel"
 
+        # 界面语言
+        self.lan = language.lan()
+        self.current_lan = self.lan.get_language()
+
         self.__init_ui()
         self.__init_connect()
 
     def __init_ui(self):
         self.setWindowFlags(QtCore.Qt.WindowCloseButtonHint)
-
         self.setMinimumSize(350, 160)
         # shotgun url
-        sgurl_label = QtWidgets.QLabel("shotgun 地址: ")
+        sgurl_label = QtWidgets.QLabel(self.current_lan.shotgun_url)
         self.sgurl_edit = QtWidgets.QLineEdit()
         # login name
-        logname_label = QtWidgets.QLabel("用户名: ")
+        logname_label = QtWidgets.QLabel(self.current_lan.user_name)
         self.logname_edit = QtWidgets.QLineEdit()
         # password
-        password_label = QtWidgets.QLabel("密码: ")
+        password_label = QtWidgets.QLabel(self.current_lan.password)
         self.password_edit = QtWidgets.QLineEdit()
         self.password_edit.setContextMenuPolicy(QtCore.Qt.NoContextMenu)
         self.password_edit.setEchoMode(QtWidgets.QLineEdit.Password)
         # user
-        user_label = QtWidgets.QLabel("当前身份: ")
+        user_label = QtWidgets.QLabel(self.current_lan.current_user)
         self.user_edit = QtWidgets.QLineEdit()
-        self.user_edit.setPlaceholderText("身份同为登录账户时，此处为空")
+        self.user_edit.setPlaceholderText(self.current_lan.current_user_placeholder_text)
+        # lan
+        language_label = QtWidgets.QLabel(self.current_lan.language)
+        self.language_combobox = QtWidgets.QComboBox()
         # button
         self.cancel_button = QtWidgets.QPushButton(self.cancel)
         self.login_button = QtWidgets.QPushButton(self.ok)
@@ -52,6 +59,8 @@ class Dialog(QtWidgets.QDialog):
         grid_layout.addWidget(self.password_edit, 2, 1)
         grid_layout.addWidget(user_label, 3, 0)
         grid_layout.addWidget(self.user_edit, 3, 1)
+        grid_layout.addWidget(language_label, 4, 0)
+        grid_layout.addWidget(self.language_combobox, 4, 1)
 
         button_groups = QtWidgets.QHBoxLayout()
         button_groups.addWidget(self.cancel_button)
@@ -64,6 +73,10 @@ class Dialog(QtWidgets.QDialog):
     def __init_connect(self):
         self.login_button.clicked.connect(self.__button_click)
         self.cancel_button.clicked.connect(self.__button_click)
+
+    def set_language_box(self, language_list, current_language):
+        self.language_combobox.addItems(language_list)
+        self.language_combobox.setCurrentText(current_language)
 
     def set_title(self, name, icon_path=None):
         self.setWindowTitle(name)
@@ -96,7 +109,7 @@ class Dialog(QtWidgets.QDialog):
     def show_retry_messagebox(self, info):
         self.close()
         reply = QtWidgets.QMessageBox.critical(self,
-                                              "登陆失败",
+                                              self.current_lan.login_failed,
                                               info,
                                               QtWidgets.QMessageBox.Cancel | QtWidgets.QMessageBox.Retry)
         if reply == QtWidgets.QMessageBox.Cancel:
